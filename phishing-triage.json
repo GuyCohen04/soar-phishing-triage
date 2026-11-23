@@ -1,0 +1,305 @@
+{
+  "schema_version": 31,
+  "standard_lib_version": 112,
+  "action_runtime_version": 99,
+  "name": "Phishing Triage",
+  "description": null,
+  "guid": "bfab14fbc5e49f229ab203e94089bff2",
+  "slug": "phishing_triage",
+  "agents": [
+    {
+      "type": "Agents::WebhookAgent",
+      "name": "Receive Phishing Report",
+      "disabled": false,
+      "description": null,
+      "guid": "9c456992d91a58745dd8f968e5e23fc9",
+      "origin_story_identifier": "cloud:8b04832add69553091ca1d3655e4972f:bfab14fbc5e49f229ab203e94089bff2",
+      "options": {
+        "path": "f3085a1308d4daa18546c54d46dd45f2",
+        "secret": "3d5e540795f8c892bb2bd607cbedf0f4",
+        "verbs": "get,post"
+      },
+      "reporting": {
+        "time_saved_value": 0,
+        "time_saved_unit": "minutes"
+      },
+      "monitoring": {
+        "monitor_all_events": false,
+        "monitor_failures": false,
+        "monitor_no_events_emitted": null
+      },
+      "template": {
+        "created_from_template_guid": null,
+        "created_from_template_version": null,
+        "template_tags": []
+      },
+      "width": null
+    },
+    {
+      "type": "Agents::EventTransformationAgent",
+      "name": "Extract Domain",
+      "disabled": false,
+      "description": null,
+      "guid": "d0b7fa6f3e581ff4a9c0de3523c83356",
+      "origin_story_identifier": "cloud:8b04832add69553091ca1d3655e4972f:bfab14fbc5e49f229ab203e94089bff2",
+      "options": {
+        "mode": "message_only",
+        "payload": {
+          "domain": "<<SPLIT(receive_phishing_report.body.url, \"/\")[2]>>",
+          "url": "<<receive_phishing_report.body.url>>",
+          "sender": "<<receive_phishing_report.body.sender>>",
+          "subject": "<<receive_phishing_report.body.subject>>"
+        }
+      },
+      "reporting": {
+        "time_saved_value": 0,
+        "time_saved_unit": "minutes"
+      },
+      "monitoring": {
+        "monitor_all_events": false,
+        "monitor_failures": false,
+        "monitor_no_events_emitted": null
+      },
+      "template": {
+        "created_from_template_guid": null,
+        "created_from_template_version": null,
+        "template_tags": []
+      },
+      "width": null,
+      "schedule": null
+    },
+    {
+      "type": "Agents::HTTPRequestAgent",
+      "name": "Check VirusTotal",
+      "disabled": false,
+      "description": null,
+      "guid": "8caf9939b439be61c903d51d6aa64a90",
+      "origin_story_identifier": "cloud:8b04832add69553091ca1d3655e4972f:bfab14fbc5e49f229ab203e94089bff2",
+      "options": {
+        "url": "https://www.virustotal.com/api/v3/domains/<<extract_domain.domain>>",
+        "content_type": "application_json",
+        "method": "get",
+        "headers": {
+          "x-apikey": "<<CREDENTIAL.virustotal>>"
+        }
+      },
+      "reporting": {
+        "time_saved_value": 0,
+        "time_saved_unit": "minutes"
+      },
+      "monitoring": {
+        "monitor_all_events": false,
+        "monitor_failures": false,
+        "monitor_no_events_emitted": null
+      },
+      "template": {
+        "created_from_template_guid": null,
+        "created_from_template_version": null,
+        "template_tags": []
+      },
+      "width": null,
+      "schedule": null
+    },
+    {
+      "type": "Agents::TriggerAgent",
+      "name": "Malicious",
+      "disabled": false,
+      "description": null,
+      "guid": "dc682dd258babf9178ba4e77c96894c9",
+      "origin_story_identifier": "cloud:8b04832add69553091ca1d3655e4972f:bfab14fbc5e49f229ab203e94089bff2",
+      "options": {
+        "paths": [
+          {
+            "uid": "211534602c88",
+            "rules": [
+              {
+                "type": "field>value",
+                "value": "2",
+                "path": "<<check_virustotal.body.data.attributes.last_analysis_stats.malicious>>"
+              }
+            ]
+          }
+        ]
+      },
+      "reporting": {
+        "time_saved_value": 0,
+        "time_saved_unit": "minutes"
+      },
+      "monitoring": {
+        "monitor_all_events": false,
+        "monitor_failures": false,
+        "monitor_no_events_emitted": null
+      },
+      "template": {
+        "created_from_template_guid": null,
+        "created_from_template_version": null,
+        "template_tags": []
+      },
+      "width": null
+    },
+    {
+      "type": "Agents::TriggerAgent",
+      "name": "Clean",
+      "disabled": false,
+      "description": null,
+      "guid": "84ce7a06e8f87372c7803b9986723474",
+      "origin_story_identifier": "cloud:8b04832add69553091ca1d3655e4972f:bfab14fbc5e49f229ab203e94089bff2",
+      "options": {
+        "paths": [
+          {
+            "uid": "a189ec53eb8f",
+            "rules": [
+              {
+                "type": "field<value",
+                "value": "3",
+                "path": "<<check_virustotal.body.data.attributes.last_analysis_stats.malicious>>"
+              }
+            ]
+          }
+        ]
+      },
+      "reporting": {
+        "time_saved_value": 0,
+        "time_saved_unit": "minutes"
+      },
+      "monitoring": {
+        "monitor_all_events": false,
+        "monitor_failures": false,
+        "monitor_no_events_emitted": null
+      },
+      "template": {
+        "created_from_template_guid": null,
+        "created_from_template_version": null,
+        "template_tags": []
+      },
+      "width": null
+    },
+    {
+      "type": "Agents::EmailAgent",
+      "name": "Alert - Clean",
+      "disabled": false,
+      "description": null,
+      "guid": "9da91411361418f1800b75c94d15dc2c",
+      "origin_story_identifier": "cloud:8b04832add69553091ca1d3655e4972f:bfab14fbc5e49f229ab203e94089bff2",
+      "options": {
+        "recipients": [],
+        "subject": "[CLEAN] <<extract_domain.domain>>, no action needed",
+        "body": "Verdict: CLEAN<br><br>Domain: <<extract_domain.domain>><br>URL: <<extract_domain.url>><br>Sender: <<extract_domain.sender>><br>Subject: <<extract_domain.subject>><br>Vendors flagging: <<check_virustotal.body.data.attributes.last_analysis_stats.malicious>><br><br>Recommended action: no action, close the report.",
+        "cc": [],
+        "bcc": [],
+        "reply_to": "",
+        "sender_address": ""
+      },
+      "reporting": {
+        "time_saved_value": 0,
+        "time_saved_unit": "minutes"
+      },
+      "monitoring": {
+        "monitor_all_events": false,
+        "monitor_failures": false,
+        "monitor_no_events_emitted": null
+      },
+      "template": {
+        "created_from_template_guid": null,
+        "created_from_template_version": null,
+        "template_tags": []
+      },
+      "width": null,
+      "schedule": null
+    },
+    {
+      "type": "Agents::EmailAgent",
+      "name": "Alert - Malicious",
+      "disabled": false,
+      "description": null,
+      "guid": "792578fec2a97a62d2a3ee9220b0537a",
+      "origin_story_identifier": "cloud:8b04832add69553091ca1d3655e4972f:bfab14fbc5e49f229ab203e94089bff2",
+      "options": {
+        "recipients": [],
+        "subject": "[PHISHING] <<extract_domain.domain>> flagged by <<check_virustotal.body.data.attributes.last_analysis_stats.malicious>> vendors",
+        "body": "Verdict: MALICIOUS<br><br>Domain: <<extract_domain.domain>><br>URL: <<extract_domain.url>><br>Sender: <<extract_domain.sender>><br>Subject: <<extract_domain.subject>><br>Vendors flagging: <<check_virustotal.body.data.attributes.last_analysis_stats.malicious>><br><br>Recommended action: block the domain and quarantine the email.",
+        "cc": [],
+        "bcc": [],
+        "reply_to": "",
+        "sender_address": ""
+      },
+      "reporting": {
+        "time_saved_value": 0,
+        "time_saved_unit": "minutes"
+      },
+      "monitoring": {
+        "monitor_all_events": false,
+        "monitor_failures": false,
+        "monitor_no_events_emitted": null
+      },
+      "template": {
+        "created_from_template_guid": null,
+        "created_from_template_version": null,
+        "template_tags": []
+      },
+      "width": null,
+      "schedule": null
+    }
+  ],
+  "diagram_notes": [],
+  "links": [
+    {
+      "source": 0,
+      "receiver": 1
+    },
+    {
+      "source": 1,
+      "receiver": 2
+    },
+    {
+      "source": 2,
+      "receiver": 3
+    },
+    {
+      "source": 2,
+      "receiver": 4
+    },
+    {
+      "source": 3,
+      "receiver": 6,
+      "path_uid": "211534602c88"
+    },
+    {
+      "source": 4,
+      "receiver": 5,
+      "path_uid": "a189ec53eb8f"
+    }
+  ],
+  "diagram_layout": "{\"792578fec2a97a62d2a3ee9220b0537a\":[240,570],\"84ce7a06e8f87372c7803b9986723474\":[570,480],\"8caf9939b439be61c903d51d6aa64a90\":[450,360],\"9c456992d91a58745dd8f968e5e23fc9\":[420,135],\"9da91411361418f1800b75c94d15dc2c\":[585,570],\"d0b7fa6f3e581ff4a9c0de3523c83356\":[450,255],\"dc682dd258babf9178ba4e77c96894c9\":[255,480]}",
+  "story_library_metadata": {},
+  "monitor_failures": false,
+  "synchronous_webhooks_enabled": false,
+  "integrations": [],
+  "sections": [],
+  "parent_only_send_to_story": false,
+  "send_to_story_timeout_enabled": false,
+  "send_to_story_timeout_duration_seconds": null,
+  "keep_events_for": 604800,
+  "reporting_status": true,
+  "send_to_story_enabled": false,
+  "entry_agent_guid": null,
+  "exit_agent_guids": [],
+  "api_entry_action_guids": [],
+  "api_exit_action_guids": [],
+  "send_to_story_access": null,
+  "send_to_story_access_source": 0,
+  "send_to_story_skill_use_requires_confirmation": true,
+  "pages": [],
+  "tags": [],
+  "time_saved_unit": "minutes",
+  "time_saved_value": 0,
+  "origin_story_identifier": "cloud:8b04832add69553091ca1d3655e4972f:bfab14fbc5e49f229ab203e94089bff2",
+  "recipients": [],
+  "integration_product": null,
+  "integration_vendor": null,
+  "llm_product_instructions": "",
+  "start_reference": null,
+  "app_endpoints": [],
+  "send_to_stories": [],
+  "exported_at": "2026-11-23T21:54:22Z"
+}
